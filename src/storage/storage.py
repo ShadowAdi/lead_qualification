@@ -15,6 +15,20 @@ def set_offer(offer: schemas.Offer):
     global _offer
     _offer = offer
 
+def get_offer() -> schemas.Offer:
+    return _offer
+
+
+def get_leads()->List[schemas.Lead]:
+    return _leads
+
+def save_results(results):
+    global _results
+    _results = results
+
+def get_results():
+    return _results
+
 def save_leads(leads:List[schemas.Lead]):
     logger.info("Storing Leads")
     global _leads
