@@ -14,3 +14,8 @@ def set_offer(offer: schemas.Offer):
     logger.info("Offer Has been stored")
     global _offer
     _offer = offer
+
+def save_leads(leads:List[schemas.Lead]):
+    logger.info("Storing Leads")
+    global _leads
+    _leads=leads
