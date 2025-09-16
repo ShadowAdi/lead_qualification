@@ -13,6 +13,10 @@ from src import parse_csv
 import logging
 from src import ai_client
 from src import scoring
+import csv
+import io
+from fastapi.responses import StreamingResponse
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -92,3 +96,21 @@ async def run_score():
 @router.get("/results")
 async def get_scored_results():
     return get_results()
+
+@router.get("/results/csv")
+async def export_results_csv():
+    results = get_results()  
+    if not results:
+        raise HTTPException(404, detail="No results found")
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=results[0].keys())
+    writer.writeheader()
+    writer.writerows(results)
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=results.csv"}
+    )
