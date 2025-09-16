@@ -1,8 +1,6 @@
 from typing import Tuple
 import re
-from src.schema import schemas
-
-
+from src.schemas import Lead,Offer
 DECISION_KEYWORDS = [
     "ceo",
     "founder",
@@ -60,7 +58,7 @@ def industry_score(
     return 0, "Industry not matched"
 
 
-def completeness_score(lead: schemas.Lead) -> Tuple[int, str]:
+def completeness_score(lead: Lead) -> Tuple[int, str]:
     required = [lead.name, lead.role, lead.company, lead.industry, lead.linkedin_bio]
     if all(field and field.strip() for field in required):
         return 10, "All required fields present"
@@ -75,7 +73,7 @@ def completeness_score(lead: schemas.Lead) -> Tuple[int, str]:
         return 0, f"Missing fields: {', '.join(missing)}"
 
 
-def compute_rule_score(lead: schemas.Lead, offer: schemas.Offer) -> Tuple[int, str]:
+def compute_rule_score(lead: Lead, offer: Offer) -> Tuple[int, str]:
     rscore, rreason = role_score(lead.role)
     iscore, ireason = industry_score(
         lead_industry=lead.industry, offer_ideal_use_cases=offer.ideal_use_cases

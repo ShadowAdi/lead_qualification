@@ -1,18 +1,27 @@
 from fastapi import APIRouter, UploadFile, File
 from fastapi import Request, HTTPException
-from src.schema import schemas
-from src.storage import storage
-from src.services import parse_csv, scoring, ai_client
+from src.schemas import Lead, Offer, Result
+from src.storage import (
+    set_offer,
+    save_leads,
+    get_leads,
+    get_offer,
+    get_results,
+    save_results,
+)
+from src import parse_csv
 import logging
+from src import ai_client
+from src import scoring
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.post("/offer")
-async def CreateOffer(offer: schemas.Offer):
+async def CreateOffer(offer: Offer):
     try:
-        storage.set_offer(offer=offer)
+        set_offer(offer=offer)
         return {"success": True, "offer": offer}
     except Exception as e:
         logger.error(f"Error in offer: {e}", exc_info=True)
@@ -27,8 +36,8 @@ async def UploadLeads(file: UploadFile = File(...)):
                 status_code=400, detail="Invalid File Upload. Only Upload CSV Files"
             )
         content = await file.read()
-        leads = parse_csv(content)
-        storage.save_leads(leads=leads)
+        leads = parse_csv.parse_leads_csv(content)
+        save_leads(leads=leads)
         return {"success": True, "count": len(leads)}
     except Exception as e:
         logger.error(f"Error in Upload Leads: {e}", exc_info=True)
@@ -38,19 +47,16 @@ async def UploadLeads(file: UploadFile = File(...)):
 @router.post("/score")
 async def run_score():
     try:
-        offer = storage.get_offer()
+        offer = get_offer()
         if not offer:
-            raise HTTPException(
-                status_code=400, detail="No offer found. POST /offer first."
-            )
-        leads = storage.get_leads()
+            raise HTTPException(status_code=400, detail="No offer found. POST /offer first.")
+        leads = get_leads()
         if not leads:
-            raise HTTPException(
-                status_code=400, detail="No leads found. POST /leads/upload first."
-            )
+            raise HTTPException(status_code=400, detail="No leads found. POST /leads/upload first.")
         results = []
         for lead in leads:
             rule_score, rule_reason = scoring.compute_rule_score(lead, offer)
+
             lead_dict = lead.model_dump()
             offer_dict = offer.model_dump()
             try:
@@ -60,25 +66,29 @@ async def run_score():
             except Exception as e:
                 intent = "Low"
                 explanation = f"AI call failed: {str(e)}"
-        ai_map = {"High": 50, "Medium": 30, "Low": 10}
-        ai_points = ai_map.get(intent, 10)
-        final = rule_score + ai_points
-        res = schemas.Result(
-            name=lead.name,
-            role=lead.role,
-            company=lead.company,
-            intent=intent,
-            score=int(final),
-            reasoning=f"{rule_reason}. AI: {explanation}",
-        )
-        results.append(res)
-        storage.save_results(results=results)
+
+            ai_map = {"High": 50, "Medium": 30, "Low": 10}
+            ai_points = ai_map.get(intent, 10)
+            final = rule_score + ai_points
+
+            out = lead_dict.copy()
+            out.update({
+                "intent": intent,
+                "score": int(final),
+                "reasoning": f"{rule_reason} AI: {explanation}"
+            })
+            results.append(out)
+
+        save_results(results=results)
         return {"status": "ok", "count": len(results)}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in Calculating Score: {e}", exc_info=True)
         raise HTTPException(500, detail="Internal Server Error")
 
 
+
 @router.get("/results")
 async def get_scored_results():
-    return storage.get_results()
+    return get_results()

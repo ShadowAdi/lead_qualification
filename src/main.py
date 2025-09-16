@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import routes
+from src.routes import router
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
@@ -27,4 +27,4 @@ def read_root():
     return {"success": True, "message": "API Is Working"}
 
 
-app.include_router(prefix="/api", router=routes)
+app.include_router(prefix="/api", router=router)
