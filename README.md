@@ -48,7 +48,7 @@ The API will be live at:
 🌐 Deployed Backend
 
 Live API base URL:
-👉 https://<your-deployment-url>.onrender.com
+👉 https://lead-qualification.onrender.com/
 
 ## 📖 API Usage Examples
 
